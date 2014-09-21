@@ -10,6 +10,7 @@ import subprocess
 def show_shell():
   global shell_hwnd
   screen_width = win32api.GetSystemMetrics(0)
+  set_transparency()
   win32gui.ShowWindow(shell_hwnd, win32con.SW_SHOW)
   win32gui.SetWindowPos(shell_hwnd,
                         win32con.HWND_TOPMOST,  # placement-order handle
@@ -25,13 +26,20 @@ def hide_shell():
   global shell_hwnd
   win32gui.ShowWindow(shell_hwnd, win32con.SW_HIDE)
 
+def set_transparency():
+  global shell_hwnd
+  transparent_factor = 0.95
+  existing_bits = win32gui.GetWindowLong(shell_hwnd, win32con.GWL_EXSTYLE)
+  win32gui.SetWindowLong(shell_hwnd, win32con.GWL_EXSTYLE, existing_bits | win32con.WS_EX_LAYERED)
+  win32gui.SetLayeredWindowAttributes(shell_hwnd, 1, int(transparent_factor * 255), win32con.LWA_COLORKEY | win32con.LWA_ALPHA)
+
 def toggle_shell():
-  print("got message")
+  print("Toggling shell")
   global shell_is_open, shell_hwnd, shell_proc
   if not is_shell_proc_running():
     open_shell()
-    hide_shell()
     show_shell()
+    shell_is_open = True
   elif shell_is_open:
     hide_shell()
     shell_is_open = False
@@ -41,6 +49,8 @@ def toggle_shell():
 
 def is_shell_proc_running():
   global shell_proc
+  if shell_proc is None:
+      return False
   return shell_proc.poll() is None
 
 def open_shell():
@@ -66,10 +76,7 @@ HOTKEYS = {
 shell_proc = None
 shell_hwnd = 0
 
-print("Launching shell")
-open_shell()
-hide_shell()
-print("Shell launched, waiting for toggle hotkey")
+print("Waiting for shell toggle hotkey")
 
 for id, vk in HOTKEYS.items ():
   print "Registering id", id, "for key", vk
